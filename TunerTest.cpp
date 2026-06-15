@@ -487,7 +487,7 @@ QList<TunerSeries *> TunerTest::ExtractShotMarkerSeriesTar ( QString path )
 		curSeries->isValid = false;
 		curSeries->seriesNum = seriesNum;
 		qDebug() << "name =" << jsonObj["name"].toString();
-		curSeries->name = new QLabel(jsonObj["name"].toString() + QString(" (%1%2)").arg(jsonObj["dist"].toInt()).arg(jsonObj["dist_unit"].toString()));
+		curSeries->name = new QLineEdit(jsonObj["name"].toString() + QString(" (%1%2)").arg(jsonObj["dist"].toInt()).arg(jsonObj["dist_unit"].toString()));
 		curSeries->deleted = false;
 		QDateTime dateTime;
 		dateTime.setMSecsSinceEpoch(jsonObj["ts"].toVariant().toULongLong());
@@ -617,7 +617,7 @@ QList<TunerSeries *> TunerTest::ExtractShotMarkerSeriesCsv ( QTextStream &csv )
 				curSeries = new TunerSeries();
 				curSeries->isValid = false;
 				curSeries->seriesNum = seriesNum;
-				curSeries->name = new QLabel(rows.at(1) + QString(" (%1)").arg(rows.at(3)));
+				curSeries->name = new QLineEdit(rows.at(1) + QString(" (%1)").arg(rows.at(3)));
 				curSeries->deleted = false;
 				curSeries->firstDate = rows.at(0);
 
@@ -836,7 +836,8 @@ void TunerTest::addNewClicked ( bool state )
 
 	series->seriesNum = newSeriesNum;
 
-	series->name = new QLabel(QString("Series %1").arg(newSeriesNum));
+	series->name = new QLineEdit(QString("Series %1").arg(newSeriesNum));
+	series->name->setMinimumWidth(series->name->fontMetrics().horizontalAdvance(QString(25, QLatin1Char('x'))));
 	tunerSeriesGrid->addWidget(series->name, numRows - 1, 1);
 
 	series->tunerSetting = new QSpinBox();
@@ -1252,6 +1253,7 @@ void TunerTest::DisplaySeriesData ( void )
 		connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesCheckBoxChanged(int)));
 
 		tunerSeriesGrid->addWidget(series->enabled, i + 1, 0);
+		series->name->setMinimumWidth(series->name->fontMetrics().horizontalAdvance(QString(25, QLatin1Char('x'))));
 		tunerSeriesGrid->addWidget(series->name, i + 1, 1, Qt::AlignVCenter);
 
 		QHBoxLayout *tunerSettingLayout = new QHBoxLayout();
@@ -1387,7 +1389,8 @@ void TunerTest::manualDataEntry ( bool state )
 
 	series->seriesNum = 1;
 
-	series->name = new QLabel("Series 1");
+	series->name = new QLineEdit("Series 1");
+	series->name->setMinimumWidth(series->name->fontMetrics().horizontalAdvance(QString(25, QLatin1Char('x'))));
 	tunerSeriesGrid->addWidget(series->name, 1, 1);
 
 	series->tunerSetting = new QSpinBox();

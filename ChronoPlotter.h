@@ -57,6 +57,9 @@
 #define PROPORTIONAL 0
 #define CONSTANT 1
 
+#define CHARGE_WEIGHT_LABEL 0
+#define SERIES_NAME_LABEL 1
+
 int scaleFontSize ( int );
 
 struct SplineSet

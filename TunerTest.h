@@ -27,7 +27,7 @@ namespace Tuner
 	{
 		bool isValid;
 		int seriesNum;
-		QLabel *name;
+		QLineEdit *name;
 		QList<QPair<double, double> > coordinates;
 		QList<QPair<double, double> > coordinates_sighters;
 		QList<double> extremeSpread;
