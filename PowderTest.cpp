@@ -1493,10 +1493,6 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 
 		qDebug() << "save file res =" << res;
 
-		if ( res )
-		{
-			QMessageBox::information(this, "Save file", QString("Saved file to '%1'").arg(path), QMessageBox::Ok, QMessageBox::Ok);
-		}
 		if ( res == false )
 		{
 			QMessageBox::warning(this, "Save file", QString("Unable to save file to '%1'\n\nPlease choose a different path").arg(path), QMessageBox::Ok, QMessageBox::Ok);
@@ -1883,11 +1879,7 @@ void PowderTest::selectLabRadarDirectory ( bool state )
 	{
 		qDebug() << "Detected LabRadar directory" << path;
 
-		QMessageBox *msg = new QMessageBox();
-		msg->setIcon(QMessageBox::Information);
-		msg->setText(QString("Detected LabRadar data\n\nUsing '%1'").arg(path));
-		msg->setWindowTitle("Success");
-		msg->exec();
+
 
 		// Proceed to display the data
 		DisplaySeriesData();
@@ -2037,11 +2029,7 @@ void PowderTest::selectMagnetoSpeedFile ( bool state )
 	{
 		qDebug() << "Detected MagnetoSpeed file" << path;
 
-		QMessageBox *msg = new QMessageBox();
-		msg->setIcon(QMessageBox::Information);
-		msg->setText(QString("Detected MagnetoSpeed data\n\nUsing '%1'").arg(path));
-		msg->setWindowTitle("Success");
-		msg->exec();
+
 
 		// Proceed to display the data
 		DisplaySeriesData();
@@ -2294,11 +2282,7 @@ void PowderTest::selectProChronoFile ( bool state )
 	{
 		qDebug() << "Detected ProChrono file" << path;
 
-		QMessageBox *msg = new QMessageBox();
-		msg->setIcon(QMessageBox::Information);
-		msg->setText(QString("Detected ProChrono data\n\nUsing '%1'").arg(path));
-		msg->setWindowTitle("Success");
-		msg->exec();
+
 
 		// Proceed to display the data
 		DisplaySeriesData();
@@ -2647,11 +2631,7 @@ void PowderTest::selectShotMarkerFile ( bool state )
 	{
 		qDebug() << "Detected ShotMarker file" << path;
 
-		QMessageBox *msg = new QMessageBox();
-		msg->setIcon(QMessageBox::Information);
-		msg->setText(QString("Detected ShotMarker data\n\nUsing '%1'").arg(path));
-		msg->setWindowTitle("Success");
-		msg->exec();
+
 
 		// Proceed to display the data
 		DisplaySeriesData();
@@ -2918,11 +2898,7 @@ void PowderTest::selectGarminFile ( bool state )
 	{
 		qDebug() << "Detected Garmin file" << path;
 
-		QMessageBox *msg = new QMessageBox();
-		msg->setIcon(QMessageBox::Information);
-		msg->setText(QString("Detected Garmin data\n\nUsing '%1'").arg(path));
-		msg->setWindowTitle("Success");
-		msg->exec();
+
 
 		// Proceed to display the data
 		DisplaySeriesData();
