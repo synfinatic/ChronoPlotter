@@ -366,7 +366,8 @@ void PowderTest::DisplaySeriesData ( void )
 		int totalShots = series->muzzleVelocities.size();
 		double velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
 		double velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
-		QLabel *resultLabel = new QLabel(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(series->velocityUnits));
+		const char *velocityUnits2 = (velocityUnits->currentIndex() == FPS) ? "ft/s" : "m/s";
+		QLabel *resultLabel = new QLabel(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(velocityUnits2));
 		seriesGrid->addWidget(resultLabel, i + 1, 3, Qt::AlignVCenter);
 
 		QLabel *datetimeLabel = new QLabel(QString("%1 %2").arg(series->firstDate).arg(series->firstTime));
