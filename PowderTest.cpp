@@ -153,6 +153,7 @@ PowderTest::PowderTest ( QWidget *parent )
 	velocityUnits = new QComboBox();
 	velocityUnits->addItem("feet per second (ft/s)");
 	velocityUnits->addItem("meters per second (m/s)");
+	connect(velocityUnits, SIGNAL(activated(int)), this, SLOT(velocityUnitsChanged(int)));
 	optionsFormLayout->addRow(new QLabel("Velocity units:"), velocityUnits);
 
 	xAxisSpacing = new QComboBox();
@@ -355,8 +356,11 @@ void PowderTest::DisplaySeriesData ( void )
 		connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesCheckBoxChanged(int)));
 
 		seriesGrid->addWidget(series->enabled, i + 1, 0);
-		series->name->setMinimumWidth(series->name->fontMetrics().horizontalAdvance(QString(25, QLatin1Char('x'))));
-		seriesGrid->addWidget(series->name, i + 1, 1, Qt::AlignVCenter);
+		if ( series->name )
+		{
+			series->name->setMinimumWidth(series->name->fontMetrics().horizontalAdvance(QString(25, QLatin1Char('x'))));
+			seriesGrid->addWidget(series->name, i + 1, 1, Qt::AlignVCenter);
+		}
 
 		QHBoxLayout *chargeWeightLayout = new QHBoxLayout();
 		chargeWeightLayout->addWidget(series->chargeWeight);
@@ -367,8 +371,8 @@ void PowderTest::DisplaySeriesData ( void )
 		double velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
 		double velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
 		const char *velocityUnits2 = (velocityUnits->currentIndex() == FPS) ? "ft/s" : "m/s";
-		QLabel *resultLabel = new QLabel(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(velocityUnits2));
-		seriesGrid->addWidget(resultLabel, i + 1, 3, Qt::AlignVCenter);
+		series->result = new QLabel(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(velocityUnits2));
+		seriesGrid->addWidget(series->result, i + 1, 3, Qt::AlignVCenter);
 
 		QLabel *datetimeLabel = new QLabel(QString("%1 %2").arg(series->firstDate).arg(series->firstTime));
 		seriesGrid->addWidget(datetimeLabel, i + 1, 4, Qt::AlignVCenter);
@@ -749,8 +753,7 @@ void PowderTest::manualDataEntry ( bool state )
 	QLabel *headerDelete = new QLabel("");
 	seriesGrid->addWidget(headerDelete, 0, 5, Qt::AlignVCenter);
 
-	// Only connect this signal for manual data entry
-	connect(velocityUnits, SIGNAL(activated(int)), this, SLOT(velocityUnitsChanged(int)));
+
 
 	/* Create initial row */
 
@@ -907,9 +910,12 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		}
 	}
 
-	/* Sort the data by charge weight (in case the user inputted charge weights out of order */
+	/* Sort the data by charge weight, unless in Series Name mode where charge weights are irrelevant */
 
-	std::sort(seriesToGraph.begin(), seriesToGraph.end(), ChargeWeightComparator);
+	if ( seriesLabel->currentIndex() == SERIES_NAME_LABEL )
+		std::sort(seriesToGraph.begin(), seriesToGraph.end(), ChronoSeriesComparator);
+	else
+		std::sort(seriesToGraph.begin(), seriesToGraph.end(), ChargeWeightComparator);
 
 	/* Check if any cartridge lengths are duplicated. We can rely on series being sorted and not zero. */
 
@@ -967,9 +973,9 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 	{
 		ChronoSeries *series = seriesToGraph.at(i);
 
-		double chargeWeight = series->chargeWeight->value();
-		if ( seriesLabel->currentIndex() == SERIES_NAME_LABEL && chargeWeight == 0 )
-			chargeWeight = i + 1;
+		double chargeWeight = (seriesLabel->currentIndex() == SERIES_NAME_LABEL)
+			? i + 1
+			: series->chargeWeight->value();
 
 		qDebug() << QString("Series %1 (%2 gr)").arg(series->seriesNum).arg(chargeWeight);
 		qDebug() << series->muzzleVelocities;
@@ -1619,8 +1625,7 @@ void PowderTest::velocityUnitsChanged ( int index )
 	qDebug() << "velocityUnitsChanged index =" << index;
 
 	/*
-	 * This signal handler is only connected in manual data entry mode. When the velocity unit is changed, we
-	 * need to iterate through and update every Series Result row to display the new unit.
+	 * When the velocity unit is changed, iterate through and update every Series Result row to display the new unit.
 	 */
 
 	const char *velocityUnit;
@@ -1759,8 +1764,7 @@ void PowderTest::loadNewChronographData ( bool state )
 		// Delete the loaded chronograph data
 		seriesData.clear();
 
-		// Disconnect the velocity units header signal (used in manual data entry), if necessary
-		disconnect(velocityUnits, SIGNAL(activated(int)), this, SLOT(velocityUnitsChanged(int)));
+
 	}
 	else
 	{
