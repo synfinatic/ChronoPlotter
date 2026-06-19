@@ -31,5 +31,5 @@ lint.target = lint
 lint.commands = @bash scripts/lint.sh
 
 test.target = test
-test.commands = @bash scripts/lint.sh
+test.commands = @bash scripts/run_tests.sh
 QMAKE_EXTRA_TARGETS += verify_tag lint test
