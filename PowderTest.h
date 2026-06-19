@@ -34,7 +34,7 @@ namespace Powder
 	{
 		bool isValid;
 		int seriesNum;
-		QLabel *name;
+		QLineEdit *name;
 		QList<double> muzzleVelocities;
 		QString velocityUnits;
 		QLabel *result;
@@ -77,6 +77,7 @@ namespace Powder
 			void deleteClicked(bool);
 			void autofillClicked(bool);
 			void velocityUnitsChanged(int);
+			void seriesLabelChanged(int);
 			void headerCheckBoxChanged(int);
 			void seriesCheckBoxChanged(int);
 			void seriesManualCheckBoxChanged(int);
@@ -108,6 +109,8 @@ namespace Powder
 			QScrollArea *scrollArea;
 			QGridLayout *seriesGrid;
 			QLabel *headerResult;
+			QLabel *headerSeriesName;
+			QLabel *headerChargeWeight;
 			QLineEdit *graphTitle;
 			QLineEdit *rifle;
 			QLineEdit *projectile;
@@ -129,6 +132,7 @@ namespace Powder
 			QComboBox *avgLocation;
 			QComboBox *vdLocation;
 			QComboBox *trendLineType;
+			QComboBox *seriesLabel;
 			QLabel *esLabel;
 			QLabel *sdLabel;
 			QLabel *avgLabel;

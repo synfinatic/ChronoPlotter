@@ -20,6 +20,8 @@ PowderTest::PowderTest ( QWidget *parent )
 	qDebug() << "Powder test";
 
 	graphPreview = NULL;
+	headerSeriesName = nullptr;
+	headerChargeWeight = nullptr;
 	prevLabRadarDir = QDir::homePath();
 	prevMagnetoSpeedDir = QDir::homePath();
 	prevProChronoDir = QDir::homePath();
@@ -151,6 +153,7 @@ PowderTest::PowderTest ( QWidget *parent )
 	velocityUnits = new QComboBox();
 	velocityUnits->addItem("feet per second (ft/s)");
 	velocityUnits->addItem("meters per second (m/s)");
+	connect(velocityUnits, SIGNAL(activated(int)), this, SLOT(velocityUnitsChanged(int)));
 	optionsFormLayout->addRow(new QLabel("Velocity units:"), velocityUnits);
 
 	xAxisSpacing = new QComboBox();
@@ -158,6 +161,12 @@ PowderTest::PowderTest ( QWidget *parent )
 	xAxisSpacing->addItem("Constant");
 	connect(xAxisSpacing, SIGNAL(currentIndexChanged(int)), this, SLOT(xAxisSpacingChanged(int)));
 	optionsFormLayout->addRow(new QLabel("X-axis spacing:"), xAxisSpacing);
+
+	seriesLabel = new QComboBox();
+	seriesLabel->addItem("Charge Weight");
+	seriesLabel->addItem("Series Name");
+	connect(seriesLabel, &QComboBox::currentIndexChanged, this, &PowderTest::seriesLabelChanged);
+	optionsFormLayout->addRow(new QLabel("Series label:"), seriesLabel);
 
 	optionsLayout->addLayout(optionsFormLayout);
 	optionsLayout->addWidget(new QHLine());
@@ -331,9 +340,9 @@ void PowderTest::DisplaySeriesData ( void )
 
 	/* Headers for series data */
 
-	QLabel *headerName = new QLabel("Series Name");
-	seriesGrid->addWidget(headerName, 0, 1, Qt::AlignVCenter);
-	QLabel *headerChargeWeight = new QLabel("Charge Weight");
+	headerSeriesName = new QLabel("Series Name");
+	seriesGrid->addWidget(headerSeriesName, 0, 1, Qt::AlignVCenter);
+	headerChargeWeight = new QLabel("Charge Weight");
 	seriesGrid->addWidget(headerChargeWeight, 0, 2, Qt::AlignVCenter);
 	headerResult = new QLabel("Series Result");
 	seriesGrid->addWidget(headerResult, 0, 3, Qt::AlignVCenter);
@@ -347,7 +356,11 @@ void PowderTest::DisplaySeriesData ( void )
 		connect(series->enabled, SIGNAL(stateChanged(int)), this, SLOT(seriesCheckBoxChanged(int)));
 
 		seriesGrid->addWidget(series->enabled, i + 1, 0);
-		seriesGrid->addWidget(series->name, i + 1, 1, Qt::AlignVCenter);
+		if ( series->name )
+		{
+			series->name->setMinimumWidth(series->name->fontMetrics().horizontalAdvance(QString(25, QLatin1Char('x'))));
+			seriesGrid->addWidget(series->name, i + 1, 1, Qt::AlignVCenter);
+		}
 
 		QHBoxLayout *chargeWeightLayout = new QHBoxLayout();
 		chargeWeightLayout->addWidget(series->chargeWeight);
@@ -357,8 +370,9 @@ void PowderTest::DisplaySeriesData ( void )
 		int totalShots = series->muzzleVelocities.size();
 		double velocityMin = *std::min_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
 		double velocityMax = *std::max_element(series->muzzleVelocities.begin(), series->muzzleVelocities.end());
-		QLabel *resultLabel = new QLabel(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(series->velocityUnits));
-		seriesGrid->addWidget(resultLabel, i + 1, 3, Qt::AlignVCenter);
+		const char *velocityUnits2 = (velocityUnits->currentIndex() == FPS) ? "ft/s" : "m/s";
+		series->result = new QLabel(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(velocityUnits2));
+		seriesGrid->addWidget(series->result, i + 1, 3, Qt::AlignVCenter);
 
 		QLabel *datetimeLabel = new QLabel(QString("%1 %2").arg(series->firstDate).arg(series->firstTime));
 		seriesGrid->addWidget(datetimeLabel, i + 1, 4, Qt::AlignVCenter);
@@ -368,6 +382,8 @@ void PowderTest::DisplaySeriesData ( void )
 
 	// Add an empty stretch row at the end for proper spacing
 	seriesGrid->setRowStretch(seriesData.size() + 1, 1);
+
+	seriesLabelChanged(seriesLabel->currentIndex());
 
 	scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 	scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -412,7 +428,9 @@ void PowderTest::addNewClicked ( bool state )
 
 	series->seriesNum = newSeriesNum;
 
-	series->name = new QLabel(QString("Series %1").arg(newSeriesNum));
+	series->name = new QLineEdit(QString("Series %1").arg(newSeriesNum));
+	series->name->setEnabled(seriesLabel->currentIndex() == SERIES_NAME_LABEL);
+	series->name->setMinimumWidth(series->name->fontMetrics().horizontalAdvance(QString(25, QLatin1Char('x'))));
 	seriesGrid->addWidget(series->name, numRows - 1, 1);
 
 	series->chargeWeight = new QDoubleSpinBox();
@@ -421,6 +439,7 @@ void PowderTest::addNewClicked ( bool state )
 	series->chargeWeight->setMaximum(1000000);
 	series->chargeWeight->setMinimumWidth(100);
 	series->chargeWeight->setMaximumWidth(100);
+	series->chargeWeight->setEnabled(seriesLabel->currentIndex() != SERIES_NAME_LABEL);
 
 	QHBoxLayout *chargeWeightLayout = new QHBoxLayout();
 	chargeWeightLayout->addWidget(series->chargeWeight);
@@ -723,9 +742,9 @@ void PowderTest::manualDataEntry ( bool state )
 	connect(headerCheckBox, SIGNAL(stateChanged(int)), this, SLOT(headerCheckBoxChanged(int)));
 	seriesGrid->addWidget(headerCheckBox, 0, 0);
 
-	QLabel *headerName = new QLabel("Series Name");
-	seriesGrid->addWidget(headerName, 0, 1, Qt::AlignVCenter);
-	QLabel *headerChargeWeight = new QLabel("Charge Weight");
+	headerSeriesName = new QLabel("Series Name");
+	seriesGrid->addWidget(headerSeriesName, 0, 1, Qt::AlignVCenter);
+	headerChargeWeight = new QLabel("Charge Weight");
 	seriesGrid->addWidget(headerChargeWeight, 0, 2, Qt::AlignVCenter);
 	headerResult = new QLabel("Series Result");
 	seriesGrid->addWidget(headerResult, 0, 3, Qt::AlignVCenter);
@@ -734,8 +753,7 @@ void PowderTest::manualDataEntry ( bool state )
 	QLabel *headerDelete = new QLabel("");
 	seriesGrid->addWidget(headerDelete, 0, 5, Qt::AlignVCenter);
 
-	// Only connect this signal for manual data entry
-	connect(velocityUnits, SIGNAL(activated(int)), this, SLOT(velocityUnitsChanged(int)));
+
 
 	/* Create initial row */
 
@@ -751,7 +769,8 @@ void PowderTest::manualDataEntry ( bool state )
 
 	series->seriesNum = 1;
 
-	series->name = new QLabel("Series 1");
+	series->name = new QLineEdit("Series 1");
+	series->name->setMinimumWidth(series->name->fontMetrics().horizontalAdvance(QString(25, QLatin1Char('x'))));
 	seriesGrid->addWidget(series->name, 1, 1);
 
 	series->chargeWeight = new QDoubleSpinBox();
@@ -796,6 +815,8 @@ void PowderTest::manualDataEntry ( bool state )
 
 	// Add an empty stretch row at the end for proper spacing
 	seriesGrid->setRowStretch(seriesGrid->rowCount(), 1);
+
+	seriesLabelChanged(seriesLabel->currentIndex());
 }
 
 void PowderTest::showGraph ( bool state )
@@ -830,7 +851,7 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		if ( (! series->deleted) && series->enabled->isChecked() )
 		{
 			numEnabled += 1;
-			if ( series->chargeWeight->value() == 0 )
+			if ( seriesLabel->currentIndex() != SERIES_NAME_LABEL && series->chargeWeight->value() == 0 )
 			{
 				qDebug() << series->name->text() << "is missing charge weight, bailing";
 
@@ -889,13 +910,16 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 		}
 	}
 
-	/* Sort the data by charge weight (in case the user inputted charge weights out of order */
+	/* Sort the data by charge weight, unless in Series Name mode where charge weights are irrelevant */
 
-	std::sort(seriesToGraph.begin(), seriesToGraph.end(), ChargeWeightComparator);
+	if ( seriesLabel->currentIndex() == SERIES_NAME_LABEL )
+		std::sort(seriesToGraph.begin(), seriesToGraph.end(), ChronoSeriesComparator);
+	else
+		std::sort(seriesToGraph.begin(), seriesToGraph.end(), ChargeWeightComparator);
 
 	/* Check if any cartridge lengths are duplicated. We can rely on series being sorted and not zero. */
 
-	if ( xAxisSpacing->currentIndex() == PROPORTIONAL )
+	if ( xAxisSpacing->currentIndex() == PROPORTIONAL && seriesLabel->currentIndex() != SERIES_NAME_LABEL )
 	{
 		double lastChargeWeight = 0;
 		for ( int i = 0; i < seriesToGraph.size(); i++ )
@@ -949,7 +973,9 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 	{
 		ChronoSeries *series = seriesToGraph.at(i);
 
-		double chargeWeight = series->chargeWeight->value();
+		double chargeWeight = (seriesLabel->currentIndex() == SERIES_NAME_LABEL)
+			? i + 1
+			: series->chargeWeight->value();
 
 		qDebug() << QString("Series %1 (%2 gr)").arg(series->seriesNum).arg(chargeWeight);
 		qDebug() << series->muzzleVelocities;
@@ -1024,13 +1050,17 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 			yError.push_back(stdev);
 		}
 
+		QString tickLabel = (seriesLabel->currentIndex() == SERIES_NAME_LABEL)
+			? series->name->text()
+			: QString::number(series->chargeWeight->value());
+
 		if ( xAxisSpacing->currentIndex() == CONSTANT )
 		{
-			textTicker->addTick(i, QString::number(series->chargeWeight->value()));
+			textTicker->addTick(i, tickLabel);
 		}
 		else
 		{
-			textTicker->addTick(chargeWeight, QString::number(series->chargeWeight->value()));
+			textTicker->addTick(chargeWeight, tickLabel);
 		}
 	}
 
@@ -1470,10 +1500,6 @@ void PowderTest::renderGraph ( bool displayGraphPreview )
 
 		qDebug() << "save file res =" << res;
 
-		if ( res )
-		{
-			QMessageBox::information(this, "Save file", QString("Saved file to '%1'").arg(path), QMessageBox::Ok, QMessageBox::Ok);
-		}
 		if ( res == false )
 		{
 			QMessageBox::warning(this, "Save file", QString("Unable to save file to '%1'\n\nPlease choose a different path").arg(path), QMessageBox::Ok, QMessageBox::Ok);
@@ -1599,8 +1625,7 @@ void PowderTest::velocityUnitsChanged ( int index )
 	qDebug() << "velocityUnitsChanged index =" << index;
 
 	/*
-	 * This signal handler is only connected in manual data entry mode. When the velocity unit is changed, we
-	 * need to iterate through and update every Series Result row to display the new unit.
+	 * When the velocity unit is changed, iterate through and update every Series Result row to display the new unit.
 	 */
 
 	const char *velocityUnit;
@@ -1633,6 +1658,24 @@ void PowderTest::velocityUnitsChanged ( int index )
 				series->result->setText(QString("%1 shot%2, %3-%4 %5").arg(totalShots).arg(totalShots > 1 ? "s" : "").arg(velocityMin).arg(velocityMax).arg(velocityUnit));
 			}
 		}
+	}
+}
+
+void PowderTest::seriesLabelChanged ( int index )
+{
+	qDebug() << "seriesLabelChanged index =" << index;
+
+	bool useSeriesName = (index == SERIES_NAME_LABEL);
+
+	if ( headerSeriesName )
+		headerSeriesName->setEnabled(useSeriesName);
+	if ( headerChargeWeight )
+		headerChargeWeight->setEnabled(!useSeriesName);
+
+	for ( ChronoSeries *series : seriesData )
+	{
+		series->name->setEnabled(useSeriesName);
+		series->chargeWeight->setEnabled(!useSeriesName);
 	}
 }
 
@@ -1721,8 +1764,7 @@ void PowderTest::loadNewChronographData ( bool state )
 		// Delete the loaded chronograph data
 		seriesData.clear();
 
-		// Disconnect the velocity units header signal (used in manual data entry), if necessary
-		disconnect(velocityUnits, SIGNAL(activated(int)), this, SLOT(velocityUnitsChanged(int)));
+
 	}
 	else
 	{
@@ -1811,7 +1853,7 @@ void PowderTest::selectLabRadarDirectory ( bool state )
 			series->enabled = new QCheckBox();
 			series->enabled->setChecked(true);
 
-			series->name = new QLabel(fileName);
+			series->name = new QLineEdit(fileName);
 
 			series->chargeWeight = new QDoubleSpinBox();
 			series->chargeWeight->setDecimals(2);
@@ -1842,11 +1884,7 @@ void PowderTest::selectLabRadarDirectory ( bool state )
 	{
 		qDebug() << "Detected LabRadar directory" << path;
 
-		QMessageBox *msg = new QMessageBox();
-		msg->setIcon(QMessageBox::Information);
-		msg->setText(QString("Detected LabRadar data\n\nUsing '%1'").arg(path));
-		msg->setWindowTitle("Success");
-		msg->exec();
+
 
 		// Proceed to display the data
 		DisplaySeriesData();
@@ -1996,11 +2034,7 @@ void PowderTest::selectMagnetoSpeedFile ( bool state )
 	{
 		qDebug() << "Detected MagnetoSpeed file" << path;
 
-		QMessageBox *msg = new QMessageBox();
-		msg->setIcon(QMessageBox::Information);
-		msg->setText(QString("Detected MagnetoSpeed data\n\nUsing '%1'").arg(path));
-		msg->setWindowTitle("Success");
-		msg->exec();
+
 
 		// Proceed to display the data
 		DisplaySeriesData();
@@ -2096,7 +2130,7 @@ QList<ChronoSeries *> PowderTest::ExtractMagnetoSpeedSeries ( QTextStream &csv )
 				{
 					// MagnetoSpeed V3 files contain an integer in the 'Series' field. Use it as the series name.
 					curSeries->seriesNum = seriesNum;
-					curSeries->name = new QLabel(QString("Series %1").arg(seriesNum));
+					curSeries->name = new QLineEdit(QString("Series %1").arg(seriesNum));
 					qDebug() << "seriesNum =" << curSeries->seriesNum;
 				}
 				else
@@ -2110,11 +2144,11 @@ QList<ChronoSeries *> PowderTest::ExtractMagnetoSpeedSeries ( QTextStream &csv )
 				// Use the series name if the user entered one
 				if ( rows.at(1).compare("") == 0 )
 				{
-					curSeries->name = new QLabel("Unnamed");
+					curSeries->name = new QLineEdit("Unnamed");
 				}
 				else
 				{
-					curSeries->name = new QLabel(rows.at(1));
+					curSeries->name = new QLineEdit(rows.at(1));
 				}
 
 				qDebug() << "Setting name to '" << curSeries->name << "' via Notes field";
@@ -2253,11 +2287,7 @@ void PowderTest::selectProChronoFile ( bool state )
 	{
 		qDebug() << "Detected ProChrono file" << path;
 
-		QMessageBox *msg = new QMessageBox();
-		msg->setIcon(QMessageBox::Information);
-		msg->setText(QString("Detected ProChrono data\n\nUsing '%1'").arg(path));
-		msg->setWindowTitle("Success");
-		msg->exec();
+
 
 		// Proceed to display the data
 		DisplaySeriesData();
@@ -2341,7 +2371,7 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries ( QTextStream &csv )
 						curSeries->isValid = true;
 						curSeries->deleted = false;
 						curSeries->seriesNum = -1;
-						curSeries->name = new QLabel(rows.at(0));
+						curSeries->name = new QLineEdit(rows.at(0));
 						curSeries->velocityUnits = "ft/s";
 					}
 
@@ -2515,7 +2545,7 @@ QList<ChronoSeries *> PowderTest::ExtractProChronoSeries_format2 ( QTextStream &
 	{
 		ChronoSeries *series = allSeries.at(i);
 		series->seriesNum = seriesNum;
-		series->name = new QLabel(QString("Series %1").arg(seriesNum));
+		series->name = new QLineEdit(QString("Series %1").arg(seriesNum));
 		seriesNum++;
 	}
 
@@ -2606,11 +2636,7 @@ void PowderTest::selectShotMarkerFile ( bool state )
 	{
 		qDebug() << "Detected ShotMarker file" << path;
 
-		QMessageBox *msg = new QMessageBox();
-		msg->setIcon(QMessageBox::Information);
-		msg->setText(QString("Detected ShotMarker data\n\nUsing '%1'").arg(path));
-		msg->setWindowTitle("Success");
-		msg->exec();
+
 
 		// Proceed to display the data
 		DisplaySeriesData();
@@ -2720,7 +2746,7 @@ QList<ChronoSeries *> PowderTest::ExtractShotMarkerSeriesTar ( QString path )
 		curSeries->isValid = false;
 		curSeries->seriesNum = seriesNum;
 		qDebug() << "name =" << jsonObj["name"].toString();
-		curSeries->name = new QLabel(jsonObj["name"].toString());
+		curSeries->name = new QLineEdit(jsonObj["name"].toString());
 		curSeries->velocityUnits = "ft/s";
 		curSeries->deleted = false;
 		QDateTime dateTime;
@@ -2877,11 +2903,7 @@ void PowderTest::selectGarminFile ( bool state )
 	{
 		qDebug() << "Detected Garmin file" << path;
 
-		QMessageBox *msg = new QMessageBox();
-		msg->setIcon(QMessageBox::Information);
-		msg->setText(QString("Detected Garmin data\n\nUsing '%1'").arg(path));
-		msg->setWindowTitle("Success");
-		msg->exec();
+
 
 		// Proceed to display the data
 		DisplaySeriesData();
@@ -2929,7 +2951,7 @@ QList<ChronoSeries *> PowderTest::ExtractGarminSeries_xlsx ( QXlsx::Document &xl
 		curSeries->firstTime = QString("");
 		
 		qDebug() << "Series name:" << worksheet->read(1,1).toString();
-		curSeries->name = new QLabel(worksheet->read(1, 1).toString());
+		curSeries->name = new QLineEdit(worksheet->read(1, 1).toString());
 		
 		// Unit of measure
 		if ( worksheet->read(2, 2).toString().contains("FPS") )
@@ -3090,7 +3112,7 @@ QList<ChronoSeries *> PowderTest::ExtractGarminSeries_csv ( QTextStream &csv )
 			if ( i == 0 )
 			{
 				qDebug() << "Series name:" << cols.at(0);
-				curSeries->name = new QLabel(cols.at(0));
+				curSeries->name = new QLineEdit(cols.at(0));
 			}
 			// Unit of measure in second row, second column
 			else if ( i == 1 )
@@ -3267,7 +3289,7 @@ void PowderTest::rrClicked ( bool state )
 
 			newSeries->seriesNum = i;
 
-			newSeries->name = new QLabel(QString("Series %1").arg(i + 1));
+			newSeries->name = new QLineEdit(QString("Series %1").arg(i + 1));
 
 			newSeries->muzzleVelocities = newVelocs;
 
