@@ -12,3 +12,4 @@ moc_predefs.h
 moc_qcustomplot.cpp
 moc_xlsxdocument.cpp
 qrc_resources.cpp
+tests/build/
