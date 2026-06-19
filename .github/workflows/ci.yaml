@@ -6,8 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  QT_VERSION: '6.8.*'
+
 jobs:
-  build-and-test:
+  build-and-test-macos:
+    name: Build and Test on macOS
     runs-on: macos-15
 
     steps:
@@ -22,7 +26,7 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
-          version: '6.*'
+          version: ${{ env.QT_VERSION }}
           host: 'mac'
           target: 'desktop'
           arch: 'clang_64'
@@ -39,24 +43,63 @@ jobs:
         run: |
           mkdir -p tests/build
           cd tests/build
-          qmake CONFIG+=debug CONFIG+=coverage ../tests/tests.pro
+          qmake CONFIG+=debug CONFIG+=coverage ../tests.pro
           make -j$(sysctl -n hw.logicalcpu)
 
       - name: Run tests
         run: |
           cd tests/build
-          QT_QPA_PLATFORM=offscreen ./tests -v2
+          QT_QPA_PLATFORM=offscreen ./tests.app/Contents/MacOS/tests -v2
 
       - name: Generate coverage report
         run: |
-          lcov --capture --directory tests/build --output-file coverage.info
+          lcov --capture --directory tests/build --output-file coverage.info \
+            --ignore-errors inconsistent,unsupported,format
           lcov --remove coverage.info \
             '*/Qt*' '/usr/*' '*/QXlsx/*' '*/qcustomplot/*' '*/miniz*' \
-            --output-file coverage.info
+            --output-file coverage.info \
+            --ignore-errors inconsistent,unsupported,format
 
       - name: Upload to Codecov
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: codecov/codecov-action@v4
         with:
           files: coverage.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
+
+  build-and-test-windows:
+    name: Build and Test on Windows
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build
+        run: |
+          qmake CONFIG+=debug ChronoPlotter.pro
+          nmake
+
+      - name: Build tests
+        run: |
+          New-Item -ItemType Directory -Force -Path tests\build | Out-Null
+          Set-Location tests\build
+          qmake CONFIG+=debug ..\tests.pro
+          nmake
+
+      - name: Run tests
+        run: |
+          Set-Location tests\build
+          $env:QT_QPA_PLATFORM = "offscreen"
+          .\debug\tests.exe -v2

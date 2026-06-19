@@ -141,6 +141,7 @@ void TestParsers::prochrono_format1_seriesNumber()
     QVERIFY(f.open(QIODevice::ReadOnly | QIODevice::Text));
     QTextStream ts(&f);
     auto list = p->ExtractProChronoSeries(ts);
+    QCOMPARE(list.size(), 1);
     // Single series gets seriesNum=1 (reversed, so last becomes 1)
     QCOMPARE(list.at(0)->seriesNum, 1);
     freeSeries(list);
