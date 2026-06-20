@@ -68,6 +68,20 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
+      - name: Package DMG
+        run: |
+          REF_NAME="${{ github.ref_name }}"
+          SAFE_NAME="${REF_NAME//\//-}"
+          macdeployqt ChronoPlotter.app -dmg
+          mv ChronoPlotter.dmg "ChronoPlotter-${SAFE_NAME}-macos.dmg"
+          echo "DMG_NAME=ChronoPlotter-${SAFE_NAME}-macos.dmg" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: ${{ env.DMG_NAME }}
+
   build-and-test-windows:
     name: Build and Test on Windows
     runs-on: windows-latest
@@ -103,3 +117,24 @@ jobs:
           Set-Location tests\build
           $env:QT_QPA_PLATFORM = "offscreen"
           .\debug\tests.exe -v2
+
+      - name: Stage and deploy Qt DLLs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory staging
+          Copy-Item debug\ChronoPlotter.exe staging\
+          windeployqt staging\ChronoPlotter.exe
+
+      - name: Package ZIP
+        shell: pwsh
+        run: |
+          $safeName = "${{ github.ref_name }}" -replace '/', '-'
+          Compress-Archive -Path staging\* -DestinationPath "ChronoPlotter-${safeName}-windows.zip"
+          echo "ZIP_NAME=ChronoPlotter-${safeName}-windows.zip" | Out-File -Append -FilePath $env:GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: ${{ env.ZIP_NAME }}
+
