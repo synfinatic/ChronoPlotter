@@ -38,7 +38,7 @@ jobs:
           mv ChronoPlotter.dmg ChronoPlotter-${{ github.ref_name }}-macos.dmg
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-dmg
           path: ChronoPlotter-${{ github.ref_name }}-macos.dmg
@@ -82,7 +82,7 @@ jobs:
         run: Compress-Archive -Path staging\* -DestinationPath ChronoPlotter-${{ github.ref_name }}-windows.zip
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-zip
           path: ChronoPlotter-${{ github.ref_name }}-windows.zip
@@ -93,7 +93,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
