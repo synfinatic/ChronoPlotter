@@ -32,7 +32,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <QDebug>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QIODevice>
 
 /* Parse an octal number, ignoring leading and trailing nonsense. */
@@ -104,6 +106,24 @@ untar(QFile &rf, QString tempDir)
 			return -1;
 		}
 		filesize = parseoct(buff + 124, 12);
+		// Reject path traversal and absolute paths before processing the entry.
+		// Limit to the 100-byte name field to avoid bleeding into adjacent header
+		// fields if the name is not NUL-terminated. Normalize separators so that
+		// Windows backslash traversal (e.g. "..\evil") is also caught.
+		QString entryName = QDir::fromNativeSeparators(
+		    QString::fromLatin1(buff, strnlen(buff, 100)));
+		if (QFileInfo(entryName).isAbsolute() || entryName.contains("../")) {
+			qDebug() << "Skipping unsafe pathname:" << entryName;
+			while (filesize > 0) {
+				bytes_read = rf.read(buff, 512);
+				if (bytes_read < 512) {
+					qDebug() << "Short read: Expected 512, got" << bytes_read;
+					return -1;
+				}
+				filesize -= (filesize < 512) ? filesize : 512;
+			}
+			continue;
+		}
 		switch (buff[156]) {
 		case '1':
 			qDebug() << " Ignoring hardlink" << buff;

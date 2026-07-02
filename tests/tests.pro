@@ -18,6 +18,7 @@ SOURCES += \
     TestMath.cpp \
     TestShotGroup.cpp \
     TestParsers.cpp \
+    TestUntar.cpp \
     ../ChronoPlotter.cpp \
     ../qcustomplot/qcustomplot.cpp \
     ../untar.cpp \
@@ -31,6 +32,7 @@ HEADERS += \
     TestMath.h \
     TestShotGroup.h \
     TestParsers.h \
+    TestUntar.h \
     ../ChronoPlotter.h \
     ../qcustomplot/qcustomplot.h \
     ../PowderTest.h \
